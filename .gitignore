@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+Trip_Sheets_Output.pdf
+.DS_Store
+.venv/
+venv/
