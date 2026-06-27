@@ -111,6 +111,12 @@ def generate_trip_sheets(excel_file_path, output_pdf_path, watermark_image_path)
         toll = safe_number(r.get("TOLL"))
         parking_toll = parking + toll
 
+        total_hrs_val = r.get("TOTAL HRS SMT")
+        total_hrs_str = f"<b>Total Hrs:</b> {total_hrs_val}" if not pd.isna(total_hrs_val) and str(total_hrs_val).strip() != "" else ""
+
+        total_km_val = r.get("SMT TOTAL KM")
+        total_km_str = f"<b>Total KMs:</b> {total_km_val}" if not pd.isna(total_km_val) and str(total_km_val).strip() != "" else ""
+
         logo_widget = ""
         if os.path.exists(watermark_image_path):
             logo_widget = Image(watermark_image_path, width=24*mm, height=24*mm)
@@ -121,7 +127,7 @@ def generate_trip_sheets(excel_file_path, output_pdf_path, watermark_image_path)
                 "Kanakapura Road, Bangalore, India 560062",
                 "CenterSmall"
             ), "", "", ""],
-            ["", P("Mob. No.: +91 96326 53666", "CenterSmall"), "", "", ""],
+            ["", P("Mob. No.: 8904357810 / 9448828489", "CenterSmall"), "", "", ""],
 
             [P("Trip Sheet No:", "Label"), P(r["SL NO"]),
              P("TRIP SHEET", "Label"), P("Date:", "Label"), P(r["DATE"])],
@@ -144,11 +150,11 @@ def generate_trip_sheets(excel_file_path, output_pdf_path, watermark_image_path)
 
             [P("Start Time:", "Label"), P(r["PICKUP TIME"]),
              P("End Time:", "Label"), P(r["END TIME"]),
-             P(r["TOTAL HRS SMT"])],
+             P(total_hrs_str)],
 
             [P("Start Km:", "Label"), P(r["START KM"]),
              P("End Km:", "Label"), P(r["END KM"]),
-             P(r["SMT TOTAL KM"])],
+             P(total_km_str)],
 
             [P("Parking / Toll:", "Label"), P(parking_toll),
              P("Service City:", "Label"), P("Bengaluru"), ""],
