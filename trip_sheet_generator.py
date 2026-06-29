@@ -28,6 +28,39 @@ def safe_number(value):
 def generate_trip_sheets(excel_file_path, output_pdf_path, watermark_image_path):
 
     df = pd.read_excel(excel_file_path)
+    
+    # Normalize column names (strip whitespace and uppercase)
+    df.columns = [str(c).strip().upper() for c in df.columns]
+    
+    # Map common variations of column names to ensure compatibility
+    column_mapping = {
+        "SL. NO": "SL NO",
+        "SL.NO": "SL NO",
+        "SR NO": "SL NO",
+        "SR. NO": "SL NO",
+        "SR.NO": "SL NO",
+        "SERIAL NO": "SL NO",
+        "END LOCATION": "END LOACTION",
+        "TOTAL HRS": "TOTAL HRS SMT",
+        "TOTAL HOURS": "TOTAL HRS SMT",
+        "TOTAL SMT HRS": "TOTAL HRS SMT",
+        "TOTAL KM": "SMT TOTAL KM",
+        "TOTAL KMS": "SMT TOTAL KM",
+        "TOTAL KM SMT": "SMT TOTAL KM",
+        "RUNNING KM": "SMT TOTAL KM",
+        "MOBILE NO": "MOBIL NO",
+        "MOBILE NUMBER": "MOBIL NO",
+        "DRIVER MOB": "MOBIL NO",
+    }
+    
+    rename_dict = {}
+    for col in df.columns:
+        for variation, standard in column_mapping.items():
+            if col == variation.upper():
+                rename_dict[col] = standard.upper()
+                break
+    df = df.rename(columns=rename_dict)
+
     df = df[df["SL NO"].astype(str).str.isnumeric()]
     df = df.reset_index(drop=True)
 
@@ -111,11 +144,17 @@ def generate_trip_sheets(excel_file_path, output_pdf_path, watermark_image_path)
         toll = safe_number(r.get("TOLL"))
         parking_toll = parking + toll
 
-        total_hrs_val = r.get("TOTAL HRS SMT")
-        total_hrs_str = f"<b>Total Hrs:</b> {total_hrs_val}" if not pd.isna(total_hrs_val) and str(total_hrs_val).strip() != "" else ""
+        total_hrs_val = r.get("TOTAL HRS")
+        if pd.isna(total_hrs_val) or str(total_hrs_val).strip() == "":
+            total_hrs_str = "<b>Total Hrs:</b>"
+        else:
+            total_hrs_str = f"<b>Total Hrs:</b> {total_hrs_val}"
 
-        total_km_val = r.get("SMT TOTAL KM")
-        total_km_str = f"<b>Total KMs:</b> {total_km_val}" if not pd.isna(total_km_val) and str(total_km_val).strip() != "" else ""
+        total_km_val = r.get("TOTAL KM")
+        if pd.isna(total_km_val) or str(total_km_val).strip() == "":
+            total_km_str = "<b>Total KMs:</b>"
+        else:
+            total_km_str = f"<b>Total KMs:</b> {total_km_val}"
 
         logo_widget = ""
         if os.path.exists(watermark_image_path):
