@@ -23,6 +23,85 @@ def safe_number(value):
 
 
 # -------------------------------------------------
+# DYNAMIC TIME AND KM DIFFERENCE CALCULATORS
+# -------------------------------------------------
+def calculate_duration(start_time, end_time):
+    def parse_to_minutes(time_val):
+        if pd.isna(time_val):
+            return None
+        # Handle datetime/time objects directly
+        if hasattr(time_val, "hour") and hasattr(time_val, "minute"):
+            return time_val.hour * 60 + time_val.minute
+            
+        s = str(time_val).strip().upper()
+        if not s:
+            return None
+            
+        is_pm = "PM" in s
+        is_am = "AM" in s
+        
+        s = s.replace("AM", "").replace("PM", "").strip()
+        s = s.replace("..", ".").replace("::", ":")
+        
+        if ":" in s:
+            parts = s.split(":")
+        elif "." in s:
+            parts = s.split(".")
+        else:
+            try:
+                hours = int(s)
+                minutes = 0
+                parts = [hours, minutes]
+            except:
+                return None
+                
+        try:
+            hours = int(parts[0])
+            minutes = int(parts[1]) if len(parts) > 1 else 0
+        except ValueError:
+            return None
+            
+        if hours <= 12:
+            if is_pm and hours < 12:
+                hours += 12
+            elif is_am and hours == 12:
+                hours = 0
+                
+        return hours * 60 + minutes
+
+    start_mins = parse_to_minutes(start_time)
+    end_mins = parse_to_minutes(end_time)
+    
+    if start_mins is None or end_mins is None:
+        return ""
+        
+    diff = end_mins - start_mins
+    if diff < 0:
+        # Duty crossed midnight
+        diff += 1440
+        
+    hrs = diff // 60
+    mins = diff % 60
+    return f"{hrs:02d}HRS {mins:02d}MIN"
+
+
+def calculate_km_difference(start_km, end_km):
+    try:
+        if pd.isna(start_km) or pd.isna(end_km):
+            return ""
+        s_km = float(str(start_km).strip())
+        e_km = float(str(end_km).strip())
+        diff = e_km - s_km
+        if diff < 0:
+            return ""  # Invalid negative distance
+        if diff == int(diff):
+            return str(int(diff))
+        return f"{diff:.1f}"
+    except:
+        return ""
+
+
+# -------------------------------------------------
 # MAIN PDF GENERATION FUNCTION
 # -------------------------------------------------
 def generate_trip_sheets(excel_file_path, output_pdf_path, watermark_image_path):
@@ -144,13 +223,19 @@ def generate_trip_sheets(excel_file_path, output_pdf_path, watermark_image_path)
         toll = safe_number(r.get("TOLL"))
         parking_toll = parking + toll
 
-        total_hrs_val = r.get("TOTAL HRS")
+        total_hrs_val = r.get("TOTAL HRS SMT")
+        if pd.isna(total_hrs_val) or str(total_hrs_val).strip() == "":
+            total_hrs_val = calculate_duration(r.get("PICKUP TIME"), r.get("END TIME"))
+
         if pd.isna(total_hrs_val) or str(total_hrs_val).strip() == "":
             total_hrs_str = "<b>Total Hrs:</b>"
         else:
             total_hrs_str = f"<b>Total Hrs:</b> {total_hrs_val}"
 
-        total_km_val = r.get("TOTAL KM")
+        total_km_val = r.get("SMT TOTAL KM")
+        if pd.isna(total_km_val) or str(total_km_val).strip() == "":
+            total_km_val = calculate_km_difference(r.get("START KM"), r.get("END KM"))
+
         if pd.isna(total_km_val) or str(total_km_val).strip() == "":
             total_km_str = "<b>Total KMs:</b>"
         else:
